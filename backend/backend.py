@@ -35,7 +35,7 @@ def get_data():
 
 @app.get("/data/{item_id}")
 def get_data_by_id(item_id: str):
-    data = read_csv('data.csv')
+    data = read_csv('backend/data.csv')
     for row in data:
         if row.get('ID') == item_id:
             return JSONResponse(content=row)
