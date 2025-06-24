@@ -33,7 +33,10 @@
   background: #fff;
   padding: 24px;
   border-radius: 12px;
-  max-width: 400px;
+  max-width: 700px;       /* Increase horizontal size */
+  width: 95vw;
+  position: relative;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
 }
 
 .popup-overlay {
@@ -51,8 +54,8 @@
   background: #fff;
   padding: 24px;
   border-radius: 12px;
-  max-width: 400px;
-  width: 90vw;
+  max-width: 700px;       /* Increase horizontal size */
+  width: 95vw;
   position: relative;
   box-shadow: 0 2px 16px rgba(0,0,0,0.2);
 }

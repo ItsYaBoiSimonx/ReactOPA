@@ -31,12 +31,12 @@ def read_csv(filename):
 
 @app.get("/data")
 def get_data():
-    data = read_csv('backend/data.csv')
+    data = read_csv('data.csv')
     return JSONResponse(content=data)
 
 @app.get("/data/{item_id}")
 def get_data_by_id(item_id: str):
-    data = read_csv('backend/data.csv')
+    data = read_csv('data.csv')
     for row in data:
         if row.get('ID') == item_id:
             return JSONResponse(content=row)
@@ -45,14 +45,14 @@ def get_data_by_id(item_id: str):
 
 @app.get("/data/search/mq/{min}&{max}")
 def search_data_by_mq(min: float, max: float):
-    data = read_csv('backend/data.csv')
+    data = read_csv('data.csv')
     results = [row for row in data if min <= float(row.get('MetriQuadri', 0)) <= max]
     return JSONResponse(content=results)
     
 
 @app.get("/data/search/vani/{min}&{max}")
 def search_data_by_vani(min: int, max: int):
-    data = read_csv('backend/data.csv')
+    data = read_csv('data.csv')
     results = [row for row in data if min <= int(row.get('Vani', 0)) <= max]
     return JSONResponse(content=results)
 
