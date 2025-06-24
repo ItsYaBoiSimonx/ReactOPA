@@ -18,15 +18,53 @@ function App() {
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
 
+  // State for search bar
+  const [search, setSearch] = useState({
+    metriMin: '',
+    metriMax: '',
+    vaniMin: '',
+    vaniMax: '',
+  });
+
+  // Helper to check if a filter is set
+  const isSet = v => v !== '' && v !== null && v !== undefined;
+
+  // Fetch data when filters change
   useEffect(() => {
-    fetch('http://localhost:9000/data')
-      .then((response) => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-      })
-      .then((json) => setData(json))
-      .catch((err) => setError(err.message));
-  }, []);
+    const fetchFiltered = async () => {
+      try {
+        let mqFiltered = null, vaniFiltered = null;
+
+        // Both filters set
+        if (isSet(search.metriMin) && isSet(search.metriMax) && isSet(search.vaniMin) && isSet(search.vaniMax)) {
+          // Fetch both and intersect by ID
+          const [mqRes, vaniRes] = await Promise.all([
+            fetch(`http://localhost:9000/data/search/mq/${search.metriMin}&${search.metriMax}`).then(r => r.json()),
+            fetch(`http://localhost:9000/data/search/vani/${search.vaniMin}&${search.vaniMax}`).then(r => r.json())
+          ]);
+          // Intersect by ID
+          const mqIds = new Set(mqRes.map(r => r.ID));
+          setData(vaniRes.filter(r => mqIds.has(r.ID)));
+        } else if (isSet(search.metriMin) && isSet(search.metriMax)) {
+          // Only metri filter
+          const mqRes = await fetch(`http://localhost:9000/data/search/mq/${search.metriMin}&${search.metriMax}`).then(r => r.json());
+          setData(mqRes);
+        } else if (isSet(search.vaniMin) && isSet(search.vaniMax)) {
+          // Only vani filter
+          const vaniRes = await fetch(`http://localhost:9000/data/search/vani/${search.vaniMin}&${search.vaniMax}`).then(r => r.json());
+          setData(vaniRes);
+        } else {
+          // No filters, fetch all
+          const all = await fetch('http://localhost:9000/data').then(r => r.json());
+          setData(all);
+        }
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+    fetchFiltered();
+  }, [search.metriMin, search.metriMax, search.vaniMin, search.vaniMax]);
 
   // Handler to open popup for a property
   const handleCardClick = (row) => {
@@ -38,10 +76,97 @@ function App() {
     setSelected(null);
   };
 
+  // Handler for search bar input (aesthetic only)
+  const handleSearchChange = (e) => {
+    const { name, value } = e.target;
+    setSearch((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Backend Data</h1>
+        {/* Search Bar (Aesthetic Only) */}
+        <form
+          className="search-bar"
+          style={{
+            display: 'flex',
+            gap: '2rem',
+            alignItems: 'center',
+            marginBottom: '2rem',
+            background: '#f7f7f7',
+            padding: '1.5rem 2.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            justifyContent: 'center', // center horizontally
+            fontSize: '1.25rem',      // bigger text
+            fontWeight: 500
+          }}
+        >
+          <div>
+            <label style={{ marginRight: 8, fontSize: '1.15em' }}>
+              <FaRulerCombined style={{ verticalAlign: 'middle' }} /> Metri Quadri:
+            </label>
+            <input
+              type="number"
+              name="metriMin"
+              placeholder="Min"
+              value={search.metriMin}
+              onChange={handleSearchChange}
+              style={{ width: 80, marginRight: 12, fontSize: '1.1em', padding: '0.3em 0.5em' }}
+            />
+            <span style={{ margin: '0 8px' }}>-</span>
+            <input
+              type="number"
+              name="metriMax"
+              placeholder="Max"
+              value={search.metriMax}
+              onChange={handleSearchChange}
+              style={{ width: 80, fontSize: '1.1em', padding: '0.3em 0.5em' }}
+            />
+          </div>
+          <div>
+            <label style={{ marginRight: 8, fontSize: '1.15em' }}>
+              <FaBed style={{ verticalAlign: 'middle' }} /> Vani:
+            </label>
+            <input
+              type="number"
+              name="vaniMin"
+              placeholder="Min"
+              value={search.vaniMin}
+              onChange={handleSearchChange}
+              style={{ width: 60, marginRight: 12, fontSize: '1.1em', padding: '0.3em 0.5em' }}
+            />
+            <span style={{ margin: '0 8px' }}>-</span>
+            <input
+              type="number"
+              name="vaniMax"
+              placeholder="Max"
+              value={search.vaniMax}
+              onChange={handleSearchChange}
+              style={{ width: 60, fontSize: '1.1em', padding: '0.3em 0.5em' }}
+            />
+          </div>
+          <button
+            type="button"
+            style={{
+              padding: '0.7rem 1.5rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: '#1976d2',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '1.1em',
+              cursor: 'not-allowed',
+              opacity: 0.7
+            }}
+          >
+            Cerca
+          </button>
+        </form>
         {error && <p className="error-message">Error: {error}</p>}
         <div className="card-list">
           {Array.isArray(data) && data.map((row, idx) => (
@@ -84,7 +209,10 @@ function App() {
                 </div>
                 <div className="property-location">
                   <FaMapMarkerAlt className="property-location-icon" />
-                  {row.Comune}, {row['Città']}, {row.Provincia}, {row.Nazione}
+                  {[row.Comune, row['Città'], row.Provincia, row.Nazione]
+                    .map(val => typeof val === 'string' ? val : '')
+                    .filter(Boolean)
+                    .join(', ')}
                 </div>
               </div>
             </div>
@@ -111,7 +239,7 @@ function App() {
                   {selected.Titolo}
                 </div>
                 <div className="property-desc">
-                  {selected.Descrizione}
+                  {selected.DescSpecifica}
                 </div>
                 <div className="property-meta">
                   <span className="property-vani">
@@ -123,7 +251,10 @@ function App() {
                 </div>
                 <div className="property-location">
                   <FaMapMarkerAlt className="property-location-icon" />
-                  {selected.Comune}, {selected['Città']}, {selected.Provincia}, {selected.Nazione}
+                  {[selected.Comune, selected['Città'], selected.Provincia, selected.Nazione]
+                    .map(val => typeof val === 'string' ? val : '')
+                    .filter(Boolean)
+                    .join(', ')}
                 </div>
               </div>
               {/* Leaflet Map */}
@@ -151,36 +282,6 @@ function App() {
           </div>
         )}
       </header>
-      {/* Add some basic popup styles */}
-      <style>{`
-        .popup-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.4);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-        .popup-content {
-          background: #fff;
-          padding: 24px;
-          border-radius: 12px;
-          max-width: 400px;
-          width: 90vw;
-          position: relative;
-          box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-        }
-        .popup-close {
-          position: absolute;
-          top: 8px;
-          right: 12px;
-          background: none;
-          border: none;
-          font-size: 2rem;
-          cursor: pointer;
-        }
-      `}</style>
     </div>
   );
 }

@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import csv
+import os
+import uvicorn
+
 
 app = FastAPI()
 
@@ -14,8 +17,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-import os
 
 cwd = os.getcwd()  # Get the current working directory (cwd)
 files = os.listdir(cwd)  # Get all the files in that director
@@ -41,7 +42,19 @@ def get_data_by_id(item_id: str):
             return JSONResponse(content=row)
     raise HTTPException(status_code=404, detail="Item not found")
 
-import uvicorn
+
+@app.get("/data/search/mq/{min}&{max}")
+def search_data_by_mq(min: float, max: float):
+    data = read_csv('backend/data.csv')
+    results = [row for row in data if min <= float(row.get('MetriQuadri', 0)) <= max]
+    return JSONResponse(content=results)
+    
+
+@app.get("/data/search/vani/{min}&{max}")
+def search_data_by_vani(min: int, max: int):
+    data = read_csv('backend/data.csv')
+    results = [row for row in data if min <= int(row.get('Vani', 0)) <= max]
+    return JSONResponse(content=results)
 
 if __name__ == "__main__":
     uvicorn.run("backend:app", host="0.0.0.0", port=9000, reload=True)
